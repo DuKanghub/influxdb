@@ -1,31 +1,28 @@
 package main
 
 import (
-	"database/sql"
-	_ "github.com/go-sql-driver/mysql"
-	"w2influx/model"
+	"fmt"
+	"github.com/robfig/cron"
+	"os"
+	"time"
 	"w2influx/service"
 )
 
 
 func main() {
-
-	dbm, err := sql.Open("mysql", "db_info:w6R2gK4R8hPN@tcp(127.0.0.1:3306)/db_info?charset=utf8&parseTime=True")
-	if err != nil {
-		panic(err)
+	c := cron.New()
+	// 定时任务这里的时间是秒 分 时 天 月 周
+	c.AddFunc("*/10 * * * * *", service.DbSize2Influx)
+	c.Start()
+	var cmd string
+	for {
+		time.Sleep(2*time.Second)
+		cmd = os.Getenv("cron")
+		fmt.Println(cmd)
+		if  cmd == "stop" {
+			c.Stop()
+			break
+		}
 	}
-	sqlStr := "select name,host,port,user,password from db_info"
-	rows, err := dbm.Query(sqlStr)
-	if err != nil {
-		panic(err)
-	}
-	defer dbm.Close()
-	defer rows.Close()
-	var db model.DbInfo
-	for rows.Next() {
-		rows.Scan(&db.Name, &db.Host, &db.Port, &db.User, &db.PassWord)
-		service.GetDbSize(db)
-
-	}
-
+	os.Exit(0)
 }
